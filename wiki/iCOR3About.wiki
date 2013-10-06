@@ -7,4 +7,4 @@ iCOR3 is a !WebService server designed for Cloud-based implementation. It delive
 = Related Projects =
  * [https://code.google.com/p/imdirectory/ iMDirectory Project]
  * [https://code.google.com/p/iauthx/ iAuthX Project]
- * [https://code.google.com/p/ipush/ iPush Project]
+ * [https://code.google.com/p/iqu/ iQueue Project]
