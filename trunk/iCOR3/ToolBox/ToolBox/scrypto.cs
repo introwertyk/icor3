@@ -39,6 +39,9 @@ namespace ToolBox
 			}
 		}
 
+		/// <summary>
+		/// Prints simple program use instruction.
+		/// </summary>
 		static void Message()
 		{
 			Console.WriteLine(String.Format(@"

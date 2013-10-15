@@ -52,6 +52,7 @@
   <ItemGroup>
     <Compile Include="iActiveDirectory\Ldap.cs" />
     <Compile Include="iSecurityComponent\Credentials.cs" />
+    <Compile Include="iSecurityComponent\Encryption.cs" />
     <Compile Include="iSecurityComponent\SimpleCrypto.cs" />
     <Compile Include="iSqlDatabase\Sql.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
