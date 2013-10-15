@@ -73,11 +73,11 @@ namespace iCOR3.iSecurityComponent
 		/// <summary>
 		/// Decrypts text from base64 format string. Binary value of each text character is simply chagned with binary negation.
 		/// </summary>
-		public static string DecryptString(string DecryptedText)
+		public static string DecryptString(string EncryptedText)
 		{
 			try
 			{
-				return new String(Convert.FromBase64String(DecryptedText).Select(bByte => Convert.ToChar((byte)~bByte)).ToArray());
+				return new String(Convert.FromBase64String(EncryptedText).Select(bByte => Convert.ToChar((byte)~bByte)).ToArray());
 			}
 			catch (Exception ex)
 			{
