@@ -1,0 +1,1 @@
+﻿MAKECERT c:\temp\SHH_CRT_AdminManagement.cer -pe -n CN="ldms.global.schindler.com" -sr CurrentUser -ss SHH_AdminManagement -sky Exchange
