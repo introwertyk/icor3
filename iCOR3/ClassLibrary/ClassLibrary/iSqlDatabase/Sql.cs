@@ -17,21 +17,46 @@ namespace iCOR3.iSqlDatabase
 
 		#region Variables
 		private bool bDisposed;
+		private int _commandTimeout;
+		private string _connectionString;
+		private System.Data.SqlClient.SqlConnection _sqlConnection;
+		#endregion
 
+		#region Properties
 		public int CommandTimeout
 		{
-			get;
-			set;
+			get
+			{
+				return this._commandTimeout;
+			}
+			set
+			{
+				this._commandTimeout = value;
+			}
 		}
+
 		public string ConnectionString
 		{
-			get;
-			set;
+			get
+			{
+				return this._connectionString;
+			}
+			set
+			{
+				this._connectionString = value;
+			}
 		}
+
 		public System.Data.SqlClient.SqlConnection SqlConnection
 		{
-			get;
-			set;
+			get
+			{
+				return this._sqlConnection;
+			}
+			set
+			{
+				this._sqlConnection = value;
+			}
 		}
 		#endregion
 
@@ -68,7 +93,7 @@ namespace iCOR3.iSqlDatabase
 		#endregion
 
 		#region Public Methods
-		public IEnumerable<Dictionary<string, object>> RetrieveData(string SqlQuery)
+		public IEnumerable<SortedList<string, object>> RetrieveData(string SqlQuery)
 		{
 			using (System.Data.SqlClient.SqlConnection sqlConnection = new System.Data.SqlClient.SqlConnection(this.ConnectionString))
 			{
@@ -88,7 +113,7 @@ namespace iCOR3.iSqlDatabase
 					{
 						while (sqlReader.Read())
 						{
-							Dictionary<string, object> dicRecord = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
+							SortedList<string, object> dicRecord = new SortedList<string, object>(StringComparer.OrdinalIgnoreCase);
 							for (int i = 0; i < sqlReader.FieldCount; i++)
 							{
 								string sKey = sqlReader.GetName(i);
