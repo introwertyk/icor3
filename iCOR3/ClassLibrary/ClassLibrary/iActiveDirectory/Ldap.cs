@@ -20,46 +20,126 @@ namespace iCOR3.iActiveDirectory
 
 		#region Variables
 		private bool bDisposed;
+		private string _baseSearchDn;
+		private string[] _domainControllers;
+		private Int32 _port;
+		private Int32 _pageSize;
+		private Int32 _protocolVersion;
+		private System.DirectoryServices.Protocols.SearchScope _searchScope;
+		private Credentials _secureCredentials;
+		private AuthType _authenticationType;
 
+		#endregion
+
+		#region Properties
+		/// <summary>
+		/// Base search DistinguishedName
+		/// </summary>
 		public string BaseSearchDn
 		{
-			get;
-			set;
+			get
+			{
+				return this._baseSearchDn;
+			}
+			set
+			{
+				this._baseSearchDn = value;
+			}
 		}
+		
+		/// <summary>
+		/// LDAP providers collection
+		/// </summary>
 		public string[] DomainControllers
 		{
-			get;
-			set;
+			get
+			{
+				return this._domainControllers;
+			}
+			set
+			{
+				this._domainControllers = value;
+			}
 		}
+
+		/// <summary>
+		/// LDAP TCP port
+		/// </summary>
 		public Int32 Port
 		{
-			get;
-			set;
+			get
+			{
+				return this._port;
+			}
+			set
+			{
+				this._port = value;
+			}
 		}
+	
+		/// <summary>
+		/// Allowed PageSize; 0 - not supported
+		/// </summary>
 		public Int32 PageSize
 		{
-			get;
-			set;
+			get
+			{
+				return this._pageSize;
+			}
+			set
+			{
+				this._pageSize = value;
+			}
 		}
+
+		/// <summary>
+		/// LDAP Protocol Version; 2.0 default
+		/// </summary>
 		public Int32 ProtocolVersion
 		{
-			get;
-			set;
+			get
+			{
+				return this._protocolVersion;
+			}
+			set
+			{
+				this._protocolVersion = value;
+			}
 		}
+
+		/// <summary>
+		/// Directory Search Scope
+		/// </summary>
 		public System.DirectoryServices.Protocols.SearchScope SearchScope
 		{
-			get;
-			set;
+			get
+			{
+				return this._searchScope;
+			}
+			set
+			{
+				this._searchScope = value;
+			}
 		}
+
+		/// <summary>
+		/// Secure LDAP connection credentials
+		/// </summary>
 		public Credentials SecureCredentials
 		{
-			get;
-			set;
+			get
+			{
+				return this._secureCredentials;
+			}
+			set
+			{
+				this._secureCredentials = value;
+			}
 		}
 		#endregion
 
 		#region Constructors
-		public Ldap(string ServerFQDN, Credentials oSecureCredentials, string BaseDn, Int32 Port)
+		public Ldap(string ServerFQDN, Credentials oSecureCredentials, string BaseDn, Int32 Port, AuthType AuthenticationType)
 		{
 			try
 			{
@@ -71,6 +151,7 @@ namespace iCOR3.iActiveDirectory
 
 				this.Port = Port;
 				this.BaseSearchDn = BaseDn;
+				this._authenticationType = AuthenticationType;
 
 				this.DomainControllers = new string[] { ServerFQDN };
 			}
@@ -79,24 +160,26 @@ namespace iCOR3.iActiveDirectory
 				throw new Exception(string.Format("{0}::{1}", new StackFrame(0, true).GetMethod().Name, eX.Message));
 			}
 		}
-		public Ldap(string ServerFQDN, string UserName, string Password) : this(ServerFQDN, new Credentials(UserName, Password), null, 389) { }
-		public Ldap(string ServerFQDN, string UserName, string Password, string BaseDn, Int32 Port) : this(ServerFQDN, new Credentials(UserName, Password), BaseDn, Port) { }
+		public Ldap(string ServerFQDN, string UserName, string Password) : this(ServerFQDN, new Credentials(Password, UserName), null, 389, AuthType.Basic) { }
+		public Ldap(string ServerFQDN, string UserName, string Password, AuthType AuthenticationType) : this(ServerFQDN, new Credentials(Password, UserName), null, 389, AuthenticationType) { }
+		public Ldap(string ServerFQDN, string UserName, string Password, string BaseDn, Int32 Port) : this(ServerFQDN, new Credentials(Password, UserName), BaseDn, Port, AuthType.Basic) { }
+		public Ldap(string ServerFQDN, string UserName, string Password, string BaseDn, Int32 Port, AuthType AuthenticationType) : this(ServerFQDN, new Credentials(Password, UserName), BaseDn, Port, AuthenticationType) { }
 		#endregion
 
 		#region Public Instance Methods
 		/// <summary>
 		/// Asynchronously retrieves MS AD(DS) objects and casts attributes into dictionaries of key/value pairs. Where key represents AD attribute name and value (object) corresponds to attribute value.
 		/// </summary>
-		public IEnumerable<Dictionary<string, object>> RetrieveAttributes(string LdapFilter, string[] AttributesToLoad, bool ShowDeleted)
+		public IEnumerable<SortedList<string, object>> RetrieveAttributes(string LdapFilter, string[] AttributesToLoad, bool ShowDeleted)
 		{
-			using (LdapConnection oLdapConnection = this.OpenLdapConnection(this.DomainControllers[0], this.SecureCredentials))
+			using (LdapConnection ldapConnection = this.OpenLdapConnection(this.DomainControllers[0], this.SecureCredentials))
 			{
 				SearchResponse dirRes = null;
 				SearchRequest srRequest = null;
 				PageResultRequestControl rcPageRequest = null;
 				PageResultResponseControl rcPageResponse = null;
 
-				string sServerName = oLdapConnection.SessionOptions.HostName;
+				string sServerName = ldapConnection.SessionOptions.HostName;
 				string sBaseDn = (this.BaseSearchDn == null)
 					? String.Format("DC={0}", sServerName.Substring(sServerName.IndexOf('.') + 1).Replace(".", ",DC="))
 					: this.BaseSearchDn;
@@ -125,7 +208,7 @@ namespace iCOR3.iActiveDirectory
 					{
 						try
 						{
-							dirRes = (SearchResponse)oLdapConnection.SendRequest(srRequest);
+							dirRes = (SearchResponse)ldapConnection.SendRequest(srRequest);
 							DirectoryControl[] dirControls = dirRes.Controls;
 
 							rcPageResponse = (dirControls.Rank > 0 && dirControls.GetLength(0) > 0) ? (PageResultResponseControl)dirRes.Controls.GetValue(0) : (PageResultResponseControl)null;
@@ -139,7 +222,7 @@ namespace iCOR3.iActiveDirectory
 						{
 							foreach (SearchResultEntry srEntry in dirRes.Entries)
 							{
-								Dictionary<string, object> dicProperties = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
+								SortedList<string, object> dicProperties = new SortedList<string, object>(StringComparer.OrdinalIgnoreCase);
 								foreach (string sAttribute in AttributesToLoad)
 								{
 									if (srEntry.Attributes.Contains(sAttribute))
@@ -165,7 +248,7 @@ namespace iCOR3.iActiveDirectory
 						{
 							foreach (SearchResultEntry srEntry in dirRes.Entries)
 							{
-								Dictionary<string, object> dicProperties = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
+								SortedList<string, object> dicProperties = new SortedList<string, object>(StringComparer.OrdinalIgnoreCase);
 								foreach (string sAttribute in AttributesToLoad)
 								{
 									if (srEntry.Attributes.Contains(sAttribute))
@@ -185,7 +268,7 @@ namespace iCOR3.iActiveDirectory
 				{
 					try
 					{
-						dirRes = (SearchResponse)oLdapConnection.SendRequest(srRequest);
+						dirRes = (SearchResponse)ldapConnection.SendRequest(srRequest);
 					}
 					catch (Exception eX)
 					{
@@ -196,7 +279,7 @@ namespace iCOR3.iActiveDirectory
 					{
 						foreach (SearchResultEntry srEntry in dirRes.Entries)
 						{
-							Dictionary<string, object> dicProperties = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
+							SortedList<string, object> dicProperties = new SortedList<string, object>(StringComparer.OrdinalIgnoreCase);
 							foreach (string sAttribute in AttributesToLoad)
 							{
 								if (srEntry.Attributes.Contains(sAttribute))
@@ -220,22 +303,22 @@ namespace iCOR3.iActiveDirectory
 		/// <summary>
 		/// Opens new LDAP connection with end-server.
 		/// </summary>
-		public LdapConnection OpenLdapConnection(string sServerName, Credentials oSecureCredentials)
+		public LdapConnection OpenLdapConnection(string sServerName, Credentials secureCredentials)
 		{
 			try
 			{
 				LdapDirectoryIdentifier oLdapDirectory = new LdapDirectoryIdentifier(sServerName, this.Port);
 
-				LdapConnection oLdapConnection = new LdapConnection(oLdapDirectory, new NetworkCredential(oSecureCredentials.UserName, oSecureCredentials.Password), AuthType.Basic);
-				oLdapConnection.Bind();
-				oLdapConnection.Timeout = TimeSpan.FromSeconds(CONN_TIME_OUT);
-				oLdapConnection.SessionOptions.TcpKeepAlive = true;
-				oLdapConnection.SessionOptions.ProtocolVersion = this.ProtocolVersion;
+				LdapConnection ldapConnection = new LdapConnection(oLdapDirectory, new NetworkCredential(secureCredentials.UserName, secureCredentials.Password), this._authenticationType);
+				ldapConnection.Bind();
+				ldapConnection.Timeout = TimeSpan.FromSeconds(CONN_TIME_OUT);
+				ldapConnection.SessionOptions.TcpKeepAlive = true;
+				ldapConnection.SessionOptions.ProtocolVersion = this.ProtocolVersion;
 
-				oLdapConnection.SessionOptions.ReferralChasing = ReferralChasingOptions.None;
-				oLdapConnection.AutoBind = false;
+				ldapConnection.SessionOptions.ReferralChasing = ReferralChasingOptions.None;
+				ldapConnection.AutoBind = false;
 
-				return oLdapConnection;
+				return ldapConnection;
 			}
 			catch (Exception eX)
 			{
